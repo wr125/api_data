@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,6 +15,8 @@ import {
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import { format, subYears, isAfter, isBefore, parseISO } from 'date-fns';
+import { Search, Clock, TrendingUp, Calendar, RefreshCcw, ChevronDown, Bot } from 'lucide-react';
+import AIAssistant from '@/app/components/AIAssistant';
 
 // Register ChartJS components
 ChartJS.register(
@@ -89,6 +91,7 @@ export default function ApiDataPage() {
   const [timeframe, setTimeframe] = useState<'1' | '5' | '15' | '30' | '60'>('1');
   const [marketStatus, setMarketStatus] = useState<MarketStatus | null>(null);
   const [marketStatusError, setMarketStatusError] = useState<string | null>(null);
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   const validateDateRange = (start: string, end: string) => {
     const startDateTime = parseISO(start);
@@ -111,7 +114,7 @@ export default function ApiDataPage() {
     return null;
   };
 
-  const fetchData = async (symbol: string, start: string, end: string) => {
+  const fetchData = useCallback(async (symbol: string, start: string, end: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -141,7 +144,7 @@ export default function ApiDataPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeframe]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,7 +163,7 @@ export default function ApiDataPage() {
     if (!validationError) {
       fetchData(ticker, startDate, endDate);
     }
-  }, []);
+  }, [ticker, startDate, endDate, fetchData]);
 
   const formatChartData = (data: any) => {
     if (!data?.results) return null;
@@ -287,197 +290,220 @@ export default function ApiDataPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 bg-white rounded-xl p-6 border border-gray-100">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Market Status</h2>
-          {marketStatusError ? (
-            <div className="text-red-600">{marketStatusError}</div>
-          ) : marketStatus ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Market:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.market === 'open' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {marketStatus.market.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">After Hours:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.afterHours
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {marketStatus.afterHours ? 'YES' : 'NO'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Early Hours:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.earlyHours
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {marketStatus.earlyHours ? 'YES' : 'NO'}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">NYSE:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.exchanges.nyse === 'open'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {marketStatus.exchanges.nyse.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">NASDAQ:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.exchanges.nasdaq === 'open'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {marketStatus.exchanges.nasdaq.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">OTC:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.exchanges.otc === 'open'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {marketStatus.exchanges.otc.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Crypto:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.currencies.crypto === 'open'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {marketStatus.currencies.crypto.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Forex:</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    marketStatus.currencies.fx === 'open'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {marketStatus.currencies.fx.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Server Time:</span>
-                  <span className="text-sm text-gray-600">
-                    {new Date(marketStatus.serverTime).toLocaleTimeString('en-US', {
-                      timeZone: 'GMT',
-                      hour12: false,
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit'
-                    })} GMT
-                  </span>
-                </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+      {/* Navigation Bar */}
+      <nav className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <TrendingUp className="h-8 w-8 text-blue-500" />
+              <span className="ml-2 text-xl font-bold">TradingAI</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setIsAIOpen(true)}
+                className="flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                <Bot className="h-4 w-4" />
+                <span>AI Assistant</span>
+              </button>
+              <div className="flex items-center px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
+                <Clock className="h-4 w-4 text-slate-400" />
+                <span className="ml-2 text-sm text-slate-300">
+                  {marketStatus && new Date(marketStatus.serverTime).toLocaleTimeString('en-US', {
+                    timeZone: 'GMT',
+                    hour12: false,
+                  })} GMT
+                </span>
               </div>
             </div>
-          ) : (
-            <div className="text-gray-600">Loading market status...</div>
-          )}
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Market Status Panel */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-400">Market Status</span>
+              <RefreshCcw className="h-4 w-4 text-slate-400" />
+            </div>
+            <div className="mt-2 flex items-center">
+              <div className={`h-2 w-2 rounded-full mr-2 ${
+                marketStatus?.market === 'open' ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+              <span className="text-lg font-semibold">
+                {marketStatus?.market === 'open' ? 'Market Open' : 'Market Closed'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700">
+            <span className="text-sm font-medium text-slate-400">NYSE</span>
+            <div className="mt-2 flex items-center">
+              <div className={`h-2 w-2 rounded-full mr-2 ${
+                marketStatus?.exchanges.nyse === 'open' ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+              <span className="text-lg font-semibold">
+                {marketStatus?.exchanges.nyse.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700">
+            <span className="text-sm font-medium text-slate-400">NASDAQ</span>
+            <div className="mt-2 flex items-center">
+              <div className={`h-2 w-2 rounded-full mr-2 ${
+                marketStatus?.exchanges.nasdaq === 'open' ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+              <span className="text-lg font-semibold">
+                {marketStatus?.exchanges.nasdaq.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700">
+            <span className="text-sm font-medium text-slate-400">Trading Hours</span>
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center">
+                <div className={`h-2 w-2 rounded-full mr-2 ${
+                  marketStatus?.earlyHours ? 'bg-purple-500' : 'bg-slate-500'
+                }`} />
+                <span className="text-sm">Pre-Market</span>
+              </div>
+              <div className="flex items-center">
+                <div className={`h-2 w-2 rounded-full mr-2 ${
+                  marketStatus?.afterHours ? 'bg-purple-500' : 'bg-slate-500'
+                }`} />
+                <span className="text-sm">After-Hours</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <h1 className="text-4xl font-bold mb-8 text-gray-800">
-          {ticker} Stock Data
-        </h1>
-        
-        <form onSubmit={handleSearch} className="mb-8">
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value)}
-                placeholder="Enter ticker symbol (e.g., AAPL)"
-                className="flex-1 max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
-              />
-              <select
-                value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value as '1' | '5' | '15' | '30' | '60')}
-                className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
-              >
-                <option value="1">1 Minute</option>
-                <option value="5">5 Minutes</option>
-                <option value="15">15 Minutes</option>
-                <option value="30">30 Minutes</option>
-                <option value="60">1 Hour</option>
-              </select>
+        {/* Search and Chart Section */}
+        <div className="space-y-6">
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
+            <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6">
+              <div className="flex-1 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Symbol</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <input
+                      type="text"
+                      value={ticker}
+                      onChange={(e) => setTicker(e.target.value)}
+                      placeholder="Enter ticker symbol (e.g., AAPL)"
+                      className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-slate-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Timeframe</label>
+                    <div className="relative">
+                      <select
+                        value={timeframe}
+                        onChange={(e) => setTimeframe(e.target.value as '1' | '5' | '15' | '30' | '60')}
+                        className="w-full appearance-none pl-4 pr-10 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      >
+                        <option value="1">1 Minute</option>
+                        <option value="5">5 Minutes</option>
+                        <option value="15">15 Minutes</option>
+                        <option value="30">30 Minutes</option>
+                        <option value="60">1 Hour</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Date Range</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        min="2023-01-01"
+                        max="2025-12-31"
+                        className="flex-1 px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      />
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        min="2023-01-01"
+                        max="2025-12-31"
+                        className="flex-1 px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
               <button
-                type="submit"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 shadow-sm font-medium"
+                type="button"
+                onClick={handleSearch}
                 disabled={loading}
+                className="w-full md:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors duration-200"
               >
-                {loading ? 'Searching...' : 'Search'}
+                {loading ? 'Loading...' : 'Analyze'}
               </button>
             </div>
-            <div className="flex gap-4 items-center">
-              <div className="flex-1 max-w-xs">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  min="2023-01-01"
-                  max="2025-12-31"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex-1 max-w-xs">
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min="2023-01-01"
-                  max="2025-12-31"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
-        </form>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            Error: {error}
-          </div>
-        )}
+            {error && (
+              <div className="mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-200">
+                {error}
+              </div>
+            )}
 
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg text-gray-600">Loading...</div>
-          </div>
-        ) : (
-          data && chartData && (
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl p-6 border border-gray-100">
-                <h2 className="text-xl font-semibold mb-4 text-gray-700">Price Chart</h2>
-                <div style={{ height: '400px' }}>
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-lg text-slate-400">Loading...</div>
+              </div>
+            ) : data && chartData ? (
+              <div>
+                <div className="h-[400px]">
                   <Chart 
                     type="line"
-                    options={chartOptions}
+                    options={{
+                      ...chartOptions,
+                      scales: {
+                        ...chartOptions.scales,
+                        price: {
+                          ...chartOptions.scales.price,
+                          grid: {
+                            ...chartOptions.scales.price.grid,
+                            color: 'rgba(148, 163, 184, 0.1)',
+                            display: true
+                          },
+                          ticks: {
+                            color: '#94a3b8'
+                          }
+                        },
+                        x: {
+                          ...chartOptions.scales.x,
+                          grid: {
+                            ...chartOptions.scales.x.grid,
+                            color: 'rgba(148, 163, 184, 0.1)',
+                            display: true
+                          },
+                          ticks: {
+                            ...chartOptions.scales.x.ticks,
+                            color: '#94a3b8'
+                          }
+                        }
+                      },
+                      plugins: {
+                        ...chartOptions.plugins,
+                        legend: {
+                          ...chartOptions.plugins.legend,
+                          labels: {
+                            color: '#94a3b8'
+                          }
+                        }
+                      }
+                    }}
                     data={{
                       labels: chartData?.labels,
                       datasets: chartData?.datasets as ChartDataset[]
@@ -485,30 +511,33 @@ export default function ApiDataPage() {
                   />
                 </div>
               </div>
+            ) : null}
+          </div>
 
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setViewRawData(!viewRawData)}
-                  className="text-sm text-blue-600 hover:text-blue-700 underline"
-                >
-                  {viewRawData ? 'Hide Raw Data' : 'View Raw Data'}
-                </button>
-              </div>
-
-              {viewRawData && (
-                <div className="bg-white rounded-xl p-6 border border-gray-100">
-                  <h2 className="text-xl font-semibold mb-4 text-gray-700">Raw Data</h2>
-                  <div className="overflow-auto max-h-[50vh]">
-                    <pre className="text-sm text-gray-600">
-                      {JSON.stringify(data, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
+          {data && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setViewRawData(!viewRawData)}
+                className="text-sm text-slate-400 hover:text-white transition-colors duration-200"
+              >
+                {viewRawData ? 'Hide Raw Data' : 'View Raw Data'}
+              </button>
             </div>
-          )
-        )}
+          )}
+
+          {viewRawData && data && (
+            <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
+              <h2 className="text-lg font-semibold mb-4 text-slate-200">Raw Data</h2>
+              <div className="overflow-auto max-h-[50vh]">
+                <pre className="text-sm text-slate-400">
+                  {JSON.stringify(data, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+      <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
     </div>
   );
 } 

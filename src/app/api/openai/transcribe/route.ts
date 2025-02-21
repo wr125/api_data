@@ -1,38 +1,56 @@
-import { NextResponse } from "next/server";
-import fs from "fs";
-import OpenAI from "openai";
+import OpenAI from 'openai';
 
-const openai = new OpenAI();
+export const runtime = "edge";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(req: Request) {
-  const body = await req.json();
-
-  const base64Audio = body.audio;
-
-  // Convert the base64 audio data to a Buffer
-  const audio = Buffer.from(base64Audio, "base64");
-
-  // Define the file path for storing the temporary WAV file
-  const filePath = "tmp/input.wav";
-
   try {
-    // Write the audio data to a temporary WAV file synchronously
-    fs.writeFileSync(filePath, audio);
+    if (!process.env.OPENAI_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is not configured' }), 
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
-    // Create a readable stream from the temporary WAV file
-    const readStream = fs.createReadStream(filePath);
+    const formData = await req.formData();
+    const audioFile = formData.get('audio') as File;
 
-    const data = await openai.audio.transcriptions.create({
-      file: readStream,
+    if (!audioFile) {
+      return new Response(
+        JSON.stringify({ error: 'No audio file provided' }), 
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
       model: "whisper-1",
     });
 
-    // Remove the temporary file after successful processing
-    fs.unlinkSync(filePath);
-
-    return NextResponse.json(data);
+    return new Response(
+      JSON.stringify({ text: transcription.text }), 
+      { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   } catch (error) {
-    console.error("Error processing audio:", error);
-    return NextResponse.error();
+    console.error('OpenAI Transcription Error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to transcribe audio' }), 
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }
